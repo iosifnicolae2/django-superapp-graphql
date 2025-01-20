@@ -1,0 +1,4 @@
+strawberry-graphql==0.236.*
+strawberry-graphql-django==0.47.*
+django-ratelimit==4.1.*
+geopy==2.4.*
