@@ -1,6 +1,3 @@
-import os
-
-
 def extend_superapp_settings(main_settings):
     main_settings['INSTALLED_APPS'] += [
         'strawberry_django',
