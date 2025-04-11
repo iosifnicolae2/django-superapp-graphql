@@ -1,12 +1,14 @@
 import importlib
+import os
 from typing import List, Type
 
 import strawberry
-from strawberry.types.base import TypeDefinition
-from strawberry_django.optimizer import DjangoOptimizerExtension
 from django.apps import apps
 from django.db import connection
 from strawberry.extensions import Extension
+from strawberry.tools import merge_types
+from strawberry.types.base import TypeDefinition
+from strawberry_django.optimizer import DjangoOptimizerExtension
 
 
 class SQLPrintingExtension(Extension):
@@ -23,21 +25,21 @@ def find_graphql_modules() -> tuple[List[Type], List[Type]]:
     mutations = []
 
     for app_config in apps.get_app_configs():
-        # Try to import graphql.queries
-        try:
+        app_path = app_config.path
+        queries_path = os.path.join(app_path, 'graphql', 'queries.py')
+        mutations_path = os.path.join(app_path, 'graphql', 'mutations.py')
+
+        # Import queries module if it exists
+        if os.path.exists(queries_path):
             queries_module = importlib.import_module(f"{app_config.name}.graphql.queries")
             if hasattr(queries_module, "Query"):
                 queries.append(getattr(queries_module, "Query"))
-        except ModuleNotFoundError:
-            pass
 
-        # Try to import graphql.mutations
-        try:
+        # Import mutations module if it exists
+        if os.path.exists(mutations_path):
             mutations_module = importlib.import_module(f"{app_config.name}.graphql.mutations")
             if hasattr(mutations_module, "Mutation"):
                 mutations.append(getattr(mutations_module, "Mutation"))
-        except ModuleNotFoundError:
-            pass
 
     return queries, mutations
 
@@ -66,9 +68,14 @@ def combine_types(base_class_name: str, types: List[Type]) -> Type:
 # Find and combine all queries and mutations
 all_queries, all_mutations = find_graphql_modules()
 
-# Create combined Query and Mutation types
-Query = combine_types("Query", all_queries) or strawberry.type("Query", {})
-Mutation = combine_types("Mutation", all_mutations) or strawberry.type("Mutation", {})
+Query = merge_types(
+    "Query",
+    tuple(all_queries)
+)
+Mutation = merge_types(
+    "Mutation",
+    tuple(all_mutations)
+)
 
 schema = strawberry.Schema(
     query=Query,
