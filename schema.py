@@ -5,9 +5,10 @@ from typing import List, Type
 import strawberry
 from django.apps import apps
 from django.db import connection
-from strawberry.extensions import Extension
+from strawberry.extensions import Extension, ParserCache
 from strawberry.tools import merge_types
 from strawberry.types.base import TypeDefinition
+from strawberry_django.extensions.django_validation_cache import DjangoValidationCache
 from strawberry_django.optimizer import DjangoOptimizerExtension
 
 
@@ -17,6 +18,17 @@ class SQLPrintingExtension(Extension):
             print(f"Query: {query['sql']}")
             print(f"Time: {query['time']}")
             print("---")
+
+
+def import_field_types():
+    """Import all field_type.py files from installed apps to register custom field types"""
+    for app_config in apps.get_app_configs():
+        app_path = app_config.path
+        field_type_path = os.path.join(app_path, 'graphql', 'field_type.py')
+
+        # Import field_type module if it exists
+        if os.path.exists(field_type_path):
+            importlib.import_module(f"{app_config.name}.graphql.field_type")
 
 
 def find_graphql_modules() -> tuple[List[Type], List[Type]]:
@@ -65,6 +77,9 @@ def combine_types(base_class_name: str, types: List[Type]) -> Type:
     )
 
 
+# Import all field types first
+import_field_types()
+
 # Find and combine all queries and mutations
 all_queries, all_mutations = find_graphql_modules()
 
@@ -81,7 +96,10 @@ schema = strawberry.Schema(
     query=Query,
     mutation=Mutation,
     extensions=[
+        DjangoValidationCache(),
+        ParserCache(maxsize=1000),
         DjangoOptimizerExtension,
         SQLPrintingExtension,
     ]
 )
+
