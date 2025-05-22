@@ -96,9 +96,19 @@ schema = strawberry.Schema(
     query=Query,
     mutation=Mutation,
     extensions=[
-        DjangoValidationCache(),
+        DjangoValidationCache(
+            timeout=7 * 24 * 60 * 60,  # Cache for 7 days
+        ),
         ParserCache(maxsize=1000),
-        DjangoOptimizerExtension,
+        DjangoOptimizerExtension(
+            enable_only_optimization = False, # This is creating a problem with django_multitenant
+            enable_select_related_optimization = True,
+            enable_prefetch_related_optimization = True,
+            enable_annotate_optimization = True,
+            enable_nested_relations_prefetch = True,
+            execution_context = None,
+            prefetch_custom_queryset = True,
+        ),
         SQLPrintingExtension,
     ]
 )
