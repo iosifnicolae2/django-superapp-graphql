@@ -22,10 +22,3 @@ class Query:
     @strawberry.field
     def health(self, info: strawberry.Info) -> bool:
         return True
-    
-    @strawberry.field
-    def current_time(self, info: strawberry.Info) -> str:
-        """Returns current time - useful for testing caching"""
-        # Simulate some processing time
-        time.sleep(0.1)
-        return datetime.now().isoformat()
